@@ -1,7 +1,7 @@
 :root {
     /* Refined Typography */
     --font-sans: 'Inter', 'Outfit', 'Noto Sans JP', sans-serif;
-    --font-thai: 'Noto Sans Thai', sans-serif;
+    --font-thai: 'Sarabun', 'Noto Sans Thai', sans-serif;
 
     /* Structural variables */
     --border-radius: 16px;

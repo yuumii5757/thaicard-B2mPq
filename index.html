@@ -12,13 +12,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@400;600;700;800&family=Noto+Sans+Thai:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@400;600;700;800&family=Noto+Sans+Thai:wght@400;600;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <header class="app-header">
-        <div class="logo">🇹🇭 ThaiCard</div>
+        <a href="#/" class="logo" style="text-decoration: none;">🇹🇭 ThaiCard</a>
         <div class="header-actions">
             <button id="themeToggleBtn" class="icon-btn" aria-label="テーマ切替">🌓</button>
         </div>
@@ -101,6 +100,14 @@
             <div class="text-center mb-4">
                 <h2>クイズの準備</h2>
                 <p class="text-muted">どのジャンルを学習しますか？</p>
+                
+                <div class="glass-panel p-3 mt-4 mb-4 text-left">
+                    <label class="block mb-2 font-bold text-sm">出題形式を選択</label>
+                    <select id="quizModeSelect" class="form-select">
+                        <option value="jp-th">🇯🇵 日本語 → 🇹🇭 タイ語 (デフォルト)</option>
+                        <option value="th-jp">🇹🇭 タイ語 → 🇯🇵 日本語</option>
+                    </select>
+                </div>
             </div>
             <div class="genre-grid grid gap-3" id="quizGenreList">
                 <!-- Genre buttons injected here -->
@@ -122,15 +129,21 @@
 
             <div class="flashcard glass-panel text-center mb-4" id="flashcard">
                 <button id="btnToggleFavCard" class="card-fav-btn">☆</button>
+                
+                <!-- Answer actions: copy, edit -->
+                <div class="card-actions" id="qCardActions" style="display:none; position:absolute; top: 1.25rem; left: 1.25rem; gap: 0.5rem; display: flex;">
+                    <button id="btnEditCard" class="icon-btn text-sm" style="width:36px; height:36px;" title="編集">✏️</button>
+                    <button id="btnCopyAnswer" class="icon-btn text-sm" style="width:36px; height:36px;" title="タイ語をコピー">📋</button>
+                </div>
+
                 <div class="card-prompt mb-4">
-                    <div class="text-muted mb-1 text-sm">日本語</div>
-                    <h3 class="native-text text-xl" id="qNative">日本語のプロンプトがここに入ります</h3>
+                    <div class="text-muted mb-1 text-sm" id="qPromptLabel">日本語</div>
+                    <h3 class="native-text text-xl" id="qPrompt">日本語のプロンプトがここに入ります</h3>
                 </div>
                 <div class="card-answer mt-4" id="qAnswerContainer" style="visibility: hidden;">
-                    <div class="text-muted mb-1 text-sm">タイ語</div>
-                    <div class="target-text text-2xl thai-font font-bold mb-2 text-primary" id="qTarget">ภาษาไทย</div>
-                    <div class="pronunciation-text text-lg mb-2" id="qPronunciation" style="display:none">[haát so:n]
-                    </div>
+                    <div class="text-muted mb-1 text-sm" id="qAnswerLabel">タイ語</div>
+                    <div class="target-text text-2xl thai-font font-bold mb-2 text-primary" id="qAnswer">ภาษาไทย</div>
+                    <div class="pronunciation-text text-lg mb-2" id="qPronunciation" style="display:none">[haát so:n]</div>
                     <div class="memo-box glass-panel-inner mt-3 text-sm text-left p-3" id="qMemoBox"
                         style="display: none;">
                         <strong>💡 メモ:</strong> <span id="qMemo"></span>
@@ -219,6 +232,12 @@
                     <button id="btnSyncDownload" class="btn btn-secondary flex-1">📥 ダウンロード</button>
                 </div>
                 <div id="syncStatus" class="mt-2 text-sm text-center"></div>
+            </div>
+
+            <div class="settings-section glass-panel p-4 mb-4">
+                <h3 class="mb-3 text-lg border-bottom pb-2">🔄 アプリの更新</h3>
+                <p class="text-sm mb-3">新しい機能や修正を読み込みます。</p>
+                <button id="btnUpdateApp" class="btn btn-primary w-full">🚀 アプリを最新版に更新</button>
             </div>
 
             <div class="settings-section glass-panel p-4 mb-4">

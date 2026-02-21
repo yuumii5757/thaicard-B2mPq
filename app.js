@@ -6,7 +6,8 @@ const App = {
             cards: [],
             currentIndex: 0,
             correct: 0,
-            wrongCards: []
+            wrongCards: [],
+            mode: 'jp-th'
         }
     },
     settings: {
@@ -178,6 +179,26 @@ const App = {
                     <div class="list-item-sub thai-font text-primary">${c.target_text} <span class="text-muted text-xs ml-2">${c.pronunciation || ''}</span></div>
                     <div class="text-xs text-muted mt-2">${c.genre || '未分類'}</div>
                 `;
+
+                // Add quick favorite toggle
+                const favBtn = document.createElement('button');
+                favBtn.className = `icon-btn text-sm ${c.favorite ? 'text-warning' : 'text-muted'}`;
+                favBtn.style.position = 'absolute';
+                favBtn.style.top = '1rem';
+                favBtn.style.right = '1rem';
+                favBtn.style.width = '32px';
+                favBtn.style.height = '32px';
+                favBtn.textContent = '☆';
+                if (c.favorite) favBtn.innerHTML = '⭐';
+                favBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    c.favorite = !c.favorite;
+                    await appDB.update(c.id, { favorite: c.favorite });
+                    await this.loadData();
+                    renderList();
+                });
+                el.appendChild(favBtn);
+
                 el.addEventListener('click', () => this.showCardModal(c));
                 cardListEl.appendChild(el);
             });
@@ -340,9 +361,29 @@ const App = {
         document.querySelector('.manage-view h2').textContent = type === 'weak' ? '要注意カード (ミスあり)' : 'お気に入りリスト';
         document.getElementById('btnAddNew').style.display = 'none';
         document.querySelector('.io-controls').style.display = 'none';
-        document.querySelector('.search-bar').insertAdjacentHTML('afterend', `
-            <a href="#/quiz?genre=${type === 'weak' ? '_weak' : '_fav'}" class="btn btn-primary block-btn mb-3">🚀 このリストでクイズ開始</a>
-        `);
+
+        const actionsHtml = `
+            <div class="flex gap-2 mb-3">
+                <a href="#/quiz?genre=${type === 'weak' ? '_weak' : '_fav'}" class="btn btn-primary flex-1">🚀 このリストでクイズ開始</a>
+                ${type === 'weak' ? `<button id="btnResetWeak" class="btn btn-secondary text-sm">🔄 ミス回数をリセット</button>` : ''}
+            </div>
+        `;
+        document.querySelector('.search-bar').insertAdjacentHTML('afterend', actionsHtml);
+
+        if (type === 'weak') {
+            document.getElementById('btnResetWeak').addEventListener('click', async () => {
+                const weakCards = this.data.cards.filter(c => c.wrongCount > 0);
+                if (weakCards.length === 0) return;
+                if (confirm(`本当に ${weakCards.length} 件のカードのミス回数を 0 にリセットしますか？`)) {
+                    for (const c of weakCards) {
+                        await appDB.update(c.id, { wrongCount: 0 });
+                    }
+                    await this.loadData();
+                    renderList();
+                    alert('リセットしました。');
+                }
+            });
+        }
 
         const cardListEl = document.getElementById('cardList');
         const searchInput = document.getElementById('searchInput');
@@ -377,6 +418,26 @@ const App = {
                     <div class="list-item-title">${c.native_text} ${type === 'weak' ? `<span class="text-danger text-xs ml-2">❌ ${c.wrongCount}</span>` : ''}</div>
                     <div class="list-item-sub thai-font text-primary">${c.target_text} <span class="text-muted text-xs ml-2">${c.pronunciation || ''}</span></div>
                 `;
+
+                // Add quick favorite toggle
+                const favBtn = document.createElement('button');
+                favBtn.className = `icon-btn text-sm ${c.favorite ? 'text-warning' : 'text-muted'}`;
+                favBtn.style.position = 'absolute';
+                favBtn.style.top = '1rem';
+                favBtn.style.right = '1rem';
+                favBtn.style.width = '32px';
+                favBtn.style.height = '32px';
+                favBtn.textContent = '☆';
+                if (c.favorite) favBtn.innerHTML = '⭐';
+                favBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    c.favorite = !c.favorite;
+                    await appDB.update(c.id, { favorite: c.favorite });
+                    await this.loadData();
+                    renderList();
+                });
+                el.appendChild(favBtn);
+
                 el.addEventListener('click', () => this.showCardModal(c));
                 cardListEl.appendChild(el);
             });
@@ -427,6 +488,10 @@ const App = {
     // --- Quiz Logic ---
 
     renderQuiz(params) {
+        let mode = document.getElementById('quizModeSelect') ? document.getElementById('quizModeSelect').value : 'jp-th';
+        // Check if mode was passed through URL params (e.g., from result screen)
+        if (params.get('mode')) mode = params.get('mode');
+
         const genreQuery = params.get('genre') || 'all';
         let targetQueue = [];
 
@@ -468,11 +533,15 @@ const App = {
             cards: selected,
             currentIndex: 0,
             correct: 0,
-            wrongCards: []
+            wrongCards: [],
+            mode: mode
         };
 
         this.renderTemplate('quiz');
         this.updateQuizUI();
+
+        // Optional update of result button to preserve mode
+        this.data.currentQuiz.genreQuery = genreQuery;
 
         // Events
         document.getElementById('btnQuitQuiz').addEventListener('click', () => window.location.hash = '#/quiz-setup');
@@ -480,18 +549,19 @@ const App = {
         document.getElementById('btnShowHint').addEventListener('click', () => {
             const c = this.data.currentQuiz.cards[this.data.currentQuiz.currentIndex];
             const ansEl = document.getElementById('qAnswerContainer');
-            const tarEl = document.getElementById('qTarget');
+            const tarEl = document.getElementById('qAnswer');
 
-            // Dynamic Cloze logic
-            const words = c.target_text.split(/(?=[ \.\,\!\?])/);
-            const clozeWords = words.map((w, idx) => {
-                if (w.trim().length === 0 || /^[\.\,\!\?]+$/.test(w)) return w;
-                // Hide every ~3rd word roughly, or 30-40% probability
-                const shouldHide = (idx % 3 === 0) || Math.random() < 0.3;
-                return shouldHide ? '___' : w;
-            });
+            if (this.data.currentQuiz.mode === 'jp-th') {
+                // Just show the target text
+                tarEl.textContent = c.target_text;
+                tarEl.classList.add('thai-font', 'text-2xl', 'text-primary');
+            } else {
+                // th-jp mode hint: Show pronunciation
+                tarEl.textContent = `ヒント: ${c.pronunciation || '発音記号がありません'}`;
+                tarEl.classList.remove('thai-font', 'text-2xl', 'text-primary');
+                tarEl.classList.add('text-lg', 'text-muted');
+            }
 
-            tarEl.textContent = clozeWords.join('');
             ansEl.style.visibility = 'visible';
             document.getElementById('btnShowHint').disabled = true;
         });
@@ -499,13 +569,28 @@ const App = {
         document.getElementById('btnShowAnswer').addEventListener('click', () => {
             const c = this.data.currentQuiz.cards[this.data.currentQuiz.currentIndex];
             const ansEl = document.getElementById('qAnswerContainer');
+            const tarEl = document.getElementById('qAnswer');
 
-            document.getElementById('qTarget').textContent = c.target_text;
+            if (this.data.currentQuiz.mode === 'jp-th') {
+                tarEl.textContent = c.target_text;
+                tarEl.classList.add('thai-font', 'text-2xl', 'text-primary');
+                tarEl.classList.remove('text-lg', 'text-muted');
+                if (c.pronunciation) {
+                    const pronEl = document.getElementById('qPronunciation');
+                    pronEl.textContent = c.pronunciation;
+                    pronEl.style.display = 'block';
+                }
+            } else {
+                tarEl.textContent = c.native_text;
+                tarEl.classList.remove('thai-font', 'text-primary');
+                tarEl.classList.add('text-xl');
 
-            if (c.pronunciation) {
-                const pronEl = document.getElementById('qPronunciation');
-                pronEl.textContent = c.pronunciation;
-                pronEl.style.display = 'block';
+                // Show pronunciation just in case they wanted to see it
+                if (c.pronunciation) {
+                    const pronEl = document.getElementById('qPronunciation');
+                    pronEl.textContent = c.pronunciation;
+                    pronEl.style.display = 'block';
+                }
             }
 
             if (c.memo) {
@@ -514,6 +599,7 @@ const App = {
             }
 
             ansEl.style.visibility = 'visible';
+            document.getElementById('qCardActions').style.display = 'flex';
 
             document.getElementById('controls-hint').style.display = 'none';
             document.getElementById('controls-judge').style.display = 'flex';
@@ -528,6 +614,21 @@ const App = {
         document.getElementById('btnTTS').addEventListener('click', () => {
             const c = this.data.currentQuiz.cards[this.data.currentQuiz.currentIndex];
             this.speakText(c.target_text);
+        });
+
+        document.getElementById('btnCopyAnswer').addEventListener('click', async () => {
+            const c = this.data.currentQuiz.cards[this.data.currentQuiz.currentIndex];
+            try {
+                await navigator.clipboard.writeText(c.target_text);
+                alert('タイ語をコピーしました！');
+            } catch (err) {
+                alert('コピーに失敗しました');
+            }
+        });
+
+        document.getElementById('btnEditCard').addEventListener('click', () => {
+            const c = this.data.currentQuiz.cards[this.data.currentQuiz.currentIndex];
+            this.showCardModal(c);
         });
 
         document.getElementById('btnToggleFavCard').addEventListener('click', async (e) => {
@@ -573,16 +674,34 @@ const App = {
         document.getElementById('quizProgress').style.width = `${((cq.currentIndex) / cq.cards.length) * 100}%`;
 
         // Card content
-        document.getElementById('qNative').textContent = c.native_text;
-        document.getElementById('qTarget').textContent = '';
+        const promptEl = document.getElementById('qPrompt');
+        const promptLabelEl = document.getElementById('qPromptLabel');
+        const answerLabelEl = document.getElementById('qAnswerLabel');
+
+        if (cq.mode === 'jp-th') {
+            promptLabelEl.textContent = '日本語';
+            promptEl.textContent = c.native_text;
+            promptEl.className = 'native-text text-xl';
+            answerLabelEl.textContent = 'タイ語';
+        } else {
+            promptLabelEl.textContent = 'タイ語';
+            promptEl.textContent = c.target_text;
+            promptEl.className = 'thai-font text-2xl text-primary font-bold';
+            answerLabelEl.textContent = '日本語';
+        }
+
+        document.getElementById('qAnswer').textContent = '';
         document.getElementById('qPronunciation').style.display = 'none';
         document.getElementById('qMemoBox').style.display = 'none';
 
         const favBtn = document.getElementById('btnToggleFavCard');
         favBtn.classList.toggle('active', c.favorite);
+        favBtn.textContent = '☆';
+        if (c.favorite) favBtn.textContent = '⭐';
 
         // Reset visibility
         document.getElementById('qAnswerContainer').style.visibility = 'hidden';
+        document.getElementById('qCardActions').style.display = 'none';
         document.getElementById('controls-hint').style.display = 'flex';
         document.getElementById('btnShowHint').disabled = false;
         document.getElementById('controls-judge').style.display = 'none';
@@ -605,6 +724,12 @@ const App = {
         document.getElementById('scorePercent').textContent = percent;
         document.getElementById('scoreCorrect').textContent = cq.correct;
         document.getElementById('scoreWrong').textContent = total - cq.correct;
+
+        const replayLink = document.querySelector('.result-actions a[href="#/quiz-setup"]');
+        if (replayLink && cq.genreQuery) {
+            // Keep same genre and mode
+            replayLink.href = `#/quiz?genre=${encodeURIComponent(cq.genreQuery)}&mode=${cq.mode}`;
+        }
 
         if (cq.wrongCards.length > 0) {
             const listEl = document.getElementById('resultCards');
@@ -732,6 +857,23 @@ const App = {
             }
         });
 
+        document.getElementById('btnUpdateApp').addEventListener('click', async () => {
+            if (confirm('最新のアプリデータを取得し、画面をリロードします。よろしいですか？')) {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let reg of registrations) {
+                        await reg.unregister();
+                    }
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) {
+                        await caches.delete(key);
+                    }
+                }
+                window.location.reload(true);
+            }
+        });
 
         document.getElementById('btnEraseAll').addEventListener('click', async () => {
             if (confirm('本当にすべてのデータを削除しますか？\nこの操作は元に戻せません。')) {
