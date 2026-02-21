@@ -176,9 +176,20 @@ const App = {
                 el.className = `list-item ${c.favorite ? 'fav' : ''}`;
                 el.innerHTML = `
                     <div class="list-item-title">${c.native_text}</div>
-                    <div class="list-item-sub thai-font text-primary">${c.target_text} <span class="text-muted text-xs ml-2">${c.pronunciation || ''}</span></div>
+                    <div class="list-item-sub thai-font text-primary flex align-center gap-2">
+                        ${c.target_text} 
+                        <span class="text-muted text-xs">${c.pronunciation || ''}</span>
+                        <button class="icon-btn text-xs list-tts-btn" style="width:24px; height:24px; min-width: 24px;" title="再生">🔊</button>
+                    </div>
                     <div class="text-xs text-muted mt-2">${c.genre || '未分類'}</div>
                 `;
+
+                // Add quick TTS
+                const ttsBtn = el.querySelector('.list-tts-btn');
+                ttsBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.speakText(c.target_text);
+                });
 
                 // Add quick favorite toggle
                 const favBtn = document.createElement('button');
@@ -416,8 +427,19 @@ const App = {
                 el.className = `list-item ${c.favorite ? 'fav' : ''}`;
                 el.innerHTML = `
                     <div class="list-item-title">${c.native_text} ${type === 'weak' ? `<span class="text-danger text-xs ml-2">❌ ${c.wrongCount}</span>` : ''}</div>
-                    <div class="list-item-sub thai-font text-primary">${c.target_text} <span class="text-muted text-xs ml-2">${c.pronunciation || ''}</span></div>
+                    <div class="list-item-sub thai-font text-primary flex align-center gap-2">
+                        ${c.target_text} 
+                        <span class="text-muted text-xs">${c.pronunciation || ''}</span>
+                        <button class="icon-btn text-xs list-tts-btn" style="width:24px; height:24px; min-width: 24px;" title="再生">🔊</button>
+                    </div>
                 `;
+
+                // Add quick TTS
+                const ttsBtn = el.querySelector('.list-tts-btn');
+                ttsBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.speakText(c.target_text);
+                });
 
                 // Add quick favorite toggle
                 const favBtn = document.createElement('button');
@@ -688,6 +710,9 @@ const App = {
             promptEl.textContent = c.target_text;
             promptEl.className = 'thai-font text-2xl text-primary font-bold';
             answerLabelEl.textContent = '日本語';
+
+            // Auto TTS when showing Thai prompt!
+            this.speakText(c.target_text);
         }
 
         document.getElementById('qAnswer').textContent = '';
