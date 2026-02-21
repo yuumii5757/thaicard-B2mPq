@@ -613,11 +613,13 @@ const App = {
                 tarEl.classList.remove('thai-font', 'text-primary');
                 tarEl.classList.add('text-xl');
 
-                // Show pronunciation just in case they wanted to see it
+                // Show pronunciation just below the Thai text (which is the prompt)
                 if (c.pronunciation) {
-                    const pronEl = document.getElementById('qPronunciation');
-                    pronEl.textContent = c.pronunciation;
-                    pronEl.style.display = 'block';
+                    const promptHintEl = document.getElementById('qPromptHint');
+                    promptHintEl.textContent = c.pronunciation;
+                    promptHintEl.style.display = 'block';
+
+                    document.getElementById('qPronunciation').style.display = 'none';
                 }
             }
 
