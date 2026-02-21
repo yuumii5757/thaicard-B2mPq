@@ -582,14 +582,15 @@ const App = {
                 // Just show the target text
                 tarEl.textContent = c.target_text;
                 tarEl.classList.add('thai-font', 'text-2xl', 'text-primary');
+                ansEl.style.visibility = 'visible';
             } else {
-                // th-jp mode hint: Show pronunciation
-                tarEl.textContent = `ヒント: ${c.pronunciation || '発音記号がありません'}`;
-                tarEl.classList.remove('thai-font', 'text-2xl', 'text-primary');
-                tarEl.classList.add('text-lg', 'text-muted');
+                // th-jp mode hint: Show pronunciation below the prompt, beautifully.
+                const promptHintEl = document.getElementById('qPromptHint');
+                promptHintEl.textContent = `💡 ヒント: ${c.pronunciation || '発音記号がありません'}`;
+                promptHintEl.style.display = 'block';
+                // we don't make ansEl visible yet!
             }
 
-            ansEl.style.visibility = 'visible';
             document.getElementById('btnShowHint').disabled = true;
         });
 
@@ -722,6 +723,7 @@ const App = {
 
         document.getElementById('qAnswer').textContent = '';
         document.getElementById('qPronunciation').style.display = 'none';
+        document.getElementById('qPromptHint').style.display = 'none';
         document.getElementById('qMemoBox').style.display = 'none';
 
         const favBtn = document.getElementById('btnToggleFavCard');
