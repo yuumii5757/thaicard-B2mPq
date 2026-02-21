@@ -479,12 +479,17 @@ const App = {
         const renderGenreBtn = (label, value, count, extraClass = '') => {
             if (count === 0) return;
             const a = document.createElement('a');
-            a.href = `#/quiz?genre=${encodeURIComponent(value)}`;
+            a.href = 'javascript:void(0)';
             a.className = `genre-btn ${extraClass}`;
             a.innerHTML = `
                 <div class="font-bold">${label}</div>
                 <div class="genre-btn-count">${count}枚</div>
             `;
+            a.addEventListener('click', () => {
+                const modeSelect = document.getElementById('quizModeSelect');
+                const mode = modeSelect ? modeSelect.value : 'jp-th';
+                window.location.hash = `#/quiz?genre=${encodeURIComponent(value)}&mode=${mode}`;
+            });
             listEl.appendChild(a);
         };
 
